@@ -1,4 +1,5 @@
 using System.Collections;
+using UnityEditor.Search;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -83,7 +84,7 @@ public class PlayerManager : MonoBehaviour
     public float HP = 100;
 
     bool isAiming = false;
-    bool isFiring = false;
+    public bool isFiring = false;
 
     public Transform upperBody;  //상체 본을 할당(Spine, UpperChest)
     public float upperBodyRotationAngle = -30f; //상체 Aim모드에서만 회전을 한다.
@@ -144,7 +145,7 @@ public class PlayerManager : MonoBehaviour
     {
         if (transform.position.y < fallThreshhold && !isGameOver)
         {
-            SoundManager.instance.PlaySFX("Scream");
+            SoundManager.instance.PlaySFX("Scream", transform.position);
             GameOver();
         }
 
@@ -279,13 +280,13 @@ public class PlayerManager : MonoBehaviour
             if ((leftHit && !IsLeftFootGround))
             {
                 if (SoundManager.instance.sfxSource.isPlaying) return;
-                SoundManager.instance.PlaySFX("Step");
+                SoundManager.instance.PlaySFX("Step", transform.position);
             }
 
             if ((rightHit && !IsRightFootGround))
             {
                 if (SoundManager.instance.sfxSource.isPlaying) return;
-                SoundManager.instance.PlaySFX("Step");
+                SoundManager.instance.PlaySFX("Step", transform.position);
             }
 
             //현재 상태를 다음 프레임과 비교하기 위해 저장
@@ -372,7 +373,7 @@ public class PlayerManager : MonoBehaviour
 
         if (Input.GetButtonDown("Jump") && isGround)
         {
-            SoundManager.instance.PlaySFX("Jump");
+            SoundManager.instance.PlaySFX("Jump", transform.position);
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
             animator.SetTrigger("JumpUp");
             isJumping = true;
@@ -536,19 +537,19 @@ public class PlayerManager : MonoBehaviour
     void AimWeapon()
     {
         animator.SetLayerWeight(1, 1);
-        if (currentWeaponMode == WeaponMode.Pistol)
+        if ((WeaponManager.instance.GetCurrentWeaponType() == Weapon.WeaponType.Pistol))
         {
             AimPistol();
         }
-        else if (currentWeaponMode == WeaponMode.ShotGun)
+        else if ((WeaponManager.instance.GetCurrentWeaponType() == Weapon.WeaponType.ShotGun))
         {
             AimShotGun();
         }
-        else if (currentWeaponMode == WeaponMode.Rifile)
+        else if ((WeaponManager.instance.GetCurrentWeaponType() == Weapon.WeaponType.Rifle))
         {
             AimRifle();
         }
-        else if (currentWeaponMode == WeaponMode.SMG)
+        else if ((WeaponManager.instance.GetCurrentWeaponType() == Weapon.WeaponType.SMG))
         {
             AimSMG();
         }
@@ -557,19 +558,19 @@ public class PlayerManager : MonoBehaviour
 
     void FireWeapon()
     {
-        if (currentWeaponMode == WeaponMode.Pistol)
+        if (WeaponManager.instance.GetCurrentWeaponType() == Weapon.WeaponType.Pistol)
         {
             FirePistol();
         }
-        else if (currentWeaponMode == WeaponMode.ShotGun)
+        else if (WeaponManager.instance.GetCurrentWeaponType() == Weapon.WeaponType.ShotGun)
         {
             FireShotGun();
         }
-        else if (currentWeaponMode == WeaponMode.Rifile)
+        else if (WeaponManager.instance.GetCurrentWeaponType() == Weapon.WeaponType.Rifle)
         {
             FireRifle();
         }
-        else if (currentWeaponMode == WeaponMode.SMG)
+        else if (WeaponManager.instance.GetCurrentWeaponType() == Weapon.WeaponType.SMG)
         {
             FireSMG();
         }
@@ -618,7 +619,9 @@ public class PlayerManager : MonoBehaviour
     void FirePistol() //1
     {
         animator.SetTrigger("FirePistol");
-        SoundManager.instance.PlaySFX("FirePistol");
+        SoundManager.instance.PlaySFX("FirePistol", transform.position);
+        GameObject effectPos = GameObject.Find("PistolEffectPos");
+        ParticleManager.instance.PlayParticle(ParticleManager.ParticleType.Pistoleffect, effectPos.transform.position);
 
         RaycastHit hit;
         Vector3 origin = Camera.main.transform.position;
@@ -628,16 +631,21 @@ public class PlayerManager : MonoBehaviour
 
         Debug.DrawRay(origin, direction * rayDistance,Color.red,1.0f);  //1.0f -> 1초 동안
 
-        if (Physics.Raycast(origin, direction * rayDistance, out hit, hitLayer))
-        { 
-            Debug.Log("Hit: "+hit.collider.name);
+        if (Physics.Raycast(origin, direction * rayDistance, out hit))
+        {
+            if (hit.collider.tag != "Zombie")
+            {
+                ParticleManager.instance.PlayParticle(ParticleManager.ParticleType.BrickImpact, hit.point);
+            }
         }
     }
 
     void FireShotGun() //2
     {
         animator.SetTrigger("FireShotGun");
-        SoundManager.instance.PlaySFX("FireShotGun");
+        SoundManager.instance.PlaySFX("FireShotGun", transform.position);
+        GameObject effectPos = GameObject.Find("ShotGunEffectPos");
+        ParticleManager.instance.PlayParticle(ParticleManager.ParticleType.ShotGunEffect, effectPos.transform.position);
 
         rayDistance = 250f;
 
@@ -664,7 +672,9 @@ public class PlayerManager : MonoBehaviour
     void FireRifle() //3
     {
         animator.SetTrigger("FireRifle");
-        SoundManager.instance.PlaySFX("FireRifle");
+        SoundManager.instance.PlaySFX("FireRifle", transform.position);
+        GameObject effectPos = GameObject.Find("RifleEffectPos");
+        ParticleManager.instance.PlayParticle(ParticleManager.ParticleType.RifleEffect, effectPos.transform.position);
 
         RaycastHit hit;
         Vector3 origin = Camera.main.transform.position;
@@ -683,7 +693,10 @@ public class PlayerManager : MonoBehaviour
     void FireSMG() //4
     {
         animator.SetTrigger("FireSMG");
-        SoundManager.instance.PlaySFX("FireSMG");
+        SoundManager.instance.PlaySFX("FireSMG", transform.position);
+        GameObject effectPos = GameObject.Find("SMGEffectPos");
+        ParticleManager.instance.PlayParticle(ParticleManager.ParticleType.SMGEffect, effectPos.transform.position);
+
 
         RaycastHit hit;
         Vector3 origin = Camera.main.transform.position;
@@ -703,22 +716,22 @@ public class PlayerManager : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Alpha1))
         {
-            currentWeaponMode = WeaponMode.Pistol;
+            WeaponManager.instance.EquipWeapon(Weapon.WeaponType.Pistol);
             Debug.Log("Pistol Change");
         }
         if (Input.GetKeyDown(KeyCode.Alpha2))
         {
-            currentWeaponMode = WeaponMode.ShotGun;
+            WeaponManager.instance.EquipWeapon(Weapon.WeaponType.ShotGun);
             Debug.Log("ShotGun Change");
         }
         if (Input.GetKeyDown(KeyCode.Alpha3))
         {
-            currentWeaponMode = WeaponMode.Rifile;
+            WeaponManager.instance.EquipWeapon(Weapon.WeaponType.Rifle);
             Debug.Log("Rifile Change");
         }
         if (Input.GetKeyDown(KeyCode.Alpha4))
         {
-            currentWeaponMode = WeaponMode.SMG;
+            WeaponManager.instance.EquipWeapon(Weapon.WeaponType.SMG);
             Debug.Log("SMG Change");
         }
     }
@@ -738,8 +751,24 @@ public class PlayerManager : MonoBehaviour
 
         foreach (RaycastHit hit in hits)
         {
-            Debug.Log("아이템 감지 :" + hit.collider.name);
-            hit.collider.gameObject.SetActive(false);
+            GameObject item = hit.collider.gameObject;
+            Debug.Log(hit.collider.name);
+
+            if (item.CompareTag("Weapon"))
+            {
+                WeaponManager.instance.AddWeapon(item);
+                item.SetActive(false);
+                Debug.Log($"인벤토리에 {item}을 추가했습니다.");
+            }
+            else if (item.CompareTag("Item"))
+            {
+                Debug.Log($"아이템 감지 : {item.name}");
+                item.SetActive(false);
+            }
+            else
+            {
+                return;
+            }
         }
         bool isPickUp = animator.GetCurrentAnimatorStateInfo(0).IsName("PickUp") && animator.GetCurrentAnimatorStateInfo(0).normalizedTime >= 1.0f; ;
 
@@ -778,5 +807,17 @@ public class PlayerManager : MonoBehaviour
         Debug.DrawLine(corners[3], corners[7], Color.green, debugDuration);
         //BoxCast의 끝점을 시각적으로 표시
         Debug.DrawRay(origin, direction * castDistance, Color.green, debugDuration);
+    }
+
+
+    public IEnumerator effectActive()
+    {
+        GameObject effectPos = GameObject.Find("EffectPos");
+        if (effectPos != null)
+        {
+            effectPos.SetActive(true);
+        }
+        yield return new WaitForSeconds(1.0f);
+        effectPos.SetActive(false);
     }
 }

@@ -36,17 +36,13 @@ public class SoundManager : MonoBehaviour
         {
             Destroy(gameObject);
         }
-        
-        
     }
     void Start()
     {
-        
     }
 
     void Update()
     {
-        
     }
 
     void InitializeAudioClips()
@@ -75,11 +71,11 @@ public class SoundManager : MonoBehaviour
             bgmSource.Play();
         }
     }
-    public void PlaySFX(string name)
+    public void PlaySFX(string name, Vector3 position)
     {
         if (sfxClips.ContainsKey(name))
         {
-            sfxSource.PlayOneShot(sfxClips[name]);
+            AudioSource.PlayClipAtPoint(sfxClips[name], position);
         }
     }
 
@@ -101,9 +97,9 @@ public class SoundManager : MonoBehaviour
         sfxSource.Stop();
     }
 
-    public void PlayFootSound(string hitTag)
+    public void PlayFootSound(string hitTag, Vector3 position)
     {
-        PlaySFX(hitTag);
+        PlaySFX(hitTag, position);
     }
 
 }
