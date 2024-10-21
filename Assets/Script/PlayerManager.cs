@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Runtime.CompilerServices;
 using UnityEditor.Search;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -103,8 +104,22 @@ public class PlayerManager : MonoBehaviour
     public Transform itemGetPos; //BoxCast 위치 - 플레이어의 손 위치에서 감지하기 위해 따로 만듦
     public float debugDuration = 2.0f; //디버그 라인 여부
 
+    //public GameObject NoveCrossHair;
+    //public GameObject CrossHair;
 
-    bool isGetItemAction = false;   
+    private bool isFire = true;  //발사 여부 
+    public float pistolFireDelay = 0.5f; //권총 발사 딜레이
+    public float shotGunFireDelay = 1.0f;//샷건 발사 딜레이
+    public float rifleFireDelay = 1.2f;//라이플 발사 딜레이
+    public float SMGFireDelay = 0.1f;//기관단총 발사 딜레이
+
+    bool isGetItemAction = false;
+
+    public float FireDelay = 0.1f;
+
+    public Light flashLight;
+    private bool isFlashLightOn;
+
 
     private void Awake()
     {
@@ -139,6 +154,8 @@ public class PlayerManager : MonoBehaviour
         {
             originalUpperBodyRotation = upperBody.localRotation;
         }
+
+        flashLight.enabled = false;
     }
 
     void Update()
@@ -222,8 +239,9 @@ public class PlayerManager : MonoBehaviour
 
         }
 
-        if (Input.GetMouseButtonDown(0) && isAiming)  //왼쪽 버튼 눌렀을 때
+        if (Input.GetMouseButtonDown(0) && isAiming && isFire)  //왼쪽 버튼 눌렀을 때
         {
+            
             FireWeapon();
         }
         if (Input.GetMouseButtonUp(1) && isAiming)    //오른쪽 마우스 버튼을 땠을 때
@@ -308,6 +326,17 @@ public class PlayerManager : MonoBehaviour
             Debug.Log("E키를 눌렀습니다.");
         }
 
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            ToggleFlashLight();
+        }
+
+    }
+
+    private void ToggleFlashLight()
+    {
+        isFlashLightOn = !isFlashLightOn;
+        flashLight.enabled = isFlashLightOn;
     }
 
     private void LateUpdate()
@@ -558,23 +587,8 @@ public class PlayerManager : MonoBehaviour
 
     void FireWeapon()
     {
-        if (WeaponManager.instance.GetCurrentWeaponType() == Weapon.WeaponType.Pistol)
-        {
-            FirePistol();
-        }
-        else if (WeaponManager.instance.GetCurrentWeaponType() == Weapon.WeaponType.ShotGun)
-        {
-            FireShotGun();
-        }
-        else if (WeaponManager.instance.GetCurrentWeaponType() == Weapon.WeaponType.Rifle)
-        {
-            FireRifle();
-        }
-        else if (WeaponManager.instance.GetCurrentWeaponType() == Weapon.WeaponType.SMG)
-        {
-            FireSMG();
-        }
-        ApplyRecoil(); 
+        StartCoroutine(FireWithDelay());
+        
     }
 
     void ApplyRecoil()  //반동에 대한 함수 
@@ -620,8 +634,10 @@ public class PlayerManager : MonoBehaviour
     {
         animator.SetTrigger("FirePistol");
         SoundManager.instance.PlaySFX("FirePistol", transform.position);
-        GameObject effectPos = GameObject.Find("PistolEffectPos");
-        ParticleManager.instance.PlayParticle(ParticleManager.ParticleType.Pistoleffect, effectPos.transform.position);
+
+        Weapon currentWeapon = WeaponManager.instance.GetCurrentWeaponComponent();
+
+        ParticleManager.instance.PlayParticle(ParticleManager.ParticleType.Pistoleffect, currentWeapon.effectPos.transform.position);
 
         RaycastHit hit;
         Vector3 origin = Camera.main.transform.position;
@@ -758,7 +774,6 @@ public class PlayerManager : MonoBehaviour
             {
                 WeaponManager.instance.AddWeapon(item);
                 item.SetActive(false);
-                Debug.Log($"인벤토리에 {item}을 추가했습니다.");
             }
             else if (item.CompareTag("Item"))
             {
@@ -820,4 +835,36 @@ public class PlayerManager : MonoBehaviour
         yield return new WaitForSeconds(1.0f);
         effectPos.SetActive(false);
     }
+
+    IEnumerator FireWithDelay()
+    {
+        isFire = false;  //false일 때는 총이 쏴지지 않음 
+
+        if (WeaponManager.instance.GetCurrentWeaponType() == Weapon.WeaponType.Pistol)
+        {
+            FireDelay = 0.5f;
+            FirePistol();
+        }
+        else if (WeaponManager.instance.GetCurrentWeaponType() == Weapon.WeaponType.ShotGun)
+        {
+            FireDelay = 1.0f;
+            FireShotGun();
+        }
+        else if (WeaponManager.instance.GetCurrentWeaponType() == Weapon.WeaponType.Rifle)
+        {
+            FireDelay = 1.2f; 
+            FireRifle();
+        }
+        else if (WeaponManager.instance.GetCurrentWeaponType() == Weapon.WeaponType.SMG)
+        {
+            FireDelay = 0.1f;
+            FireSMG();
+        }
+        ApplyRecoil();
+
+        yield return new WaitForSeconds(FireDelay);
+
+        isFire = true;
+    }
 }
+

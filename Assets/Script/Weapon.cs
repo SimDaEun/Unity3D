@@ -10,6 +10,7 @@ public class Weapon : MonoBehaviour
         Pistol, ShotGun, Rifle, SMG
     }
 
+    public Transform effectPos;  //해당 총구 위치를 저장 
     public WeaponType weaponType;
 
     public Camera targetCamera;
@@ -24,6 +25,10 @@ public class Weapon : MonoBehaviour
         }
 
         UIImage.gameObject.SetActive(false);
+        if (effectPos == null)
+        {
+            effectPos = transform.Find("EffectPos");
+        }
     }
 
     void Update()

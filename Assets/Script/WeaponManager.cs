@@ -26,10 +26,8 @@ public class WeaponManager : MonoBehaviour
 
     private GameObject currentWeapon; //현재 장착된 무기 
     private Weapon.WeaponType currentWeaponType;  //현재 무기 타입 
-
+    private Weapon currentWeaponComponent;  //현재 무기의 Weapon 컴포넌트(EffectPos를 가져오기 위해 사용) 
     
-
-
 
     private void Awake()
     {
@@ -72,6 +70,8 @@ public class WeaponManager : MonoBehaviour
         currentWeapon = newWeapon;
         currentWeaponType = weaponType;
 
+        currentWeaponComponent = newWeapon.GetComponent<Weapon>();
+
         currentWeapon.SetActive(true);
         Debug.Log($"{weaponType} 무기 장착");
     }
@@ -94,5 +94,10 @@ public class WeaponManager : MonoBehaviour
     public Weapon.WeaponType GetCurrentWeaponType()  //weapon type 반환해주는 함수 
     {
         return currentWeaponType;
+    }
+
+    public Weapon GetCurrentWeaponComponent()
+    {
+        return currentWeaponComponent;
     }
 }
