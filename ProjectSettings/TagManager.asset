@@ -9,6 +9,8 @@ TagManager:
   - Weapon
   - Coin
   - Floor
+  - Head
+  - Zombie
   layers:
   - Default
   - TransparentFX

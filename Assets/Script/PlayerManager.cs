@@ -2,7 +2,9 @@ using System.Collections;
 using System.Runtime.CompilerServices;
 using UnityEditor.Search;
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using UnityEditor;
 
 public class PlayerManager : MonoBehaviour
 {
@@ -27,7 +29,7 @@ public class PlayerManager : MonoBehaviour
     public float rayDistance = 100;
 
     private int shotGunRayCount = 5;  //샷건 총알이 퍼지는 수 
-    private float shotGunspreadAngle = 10f; //총알 각도 
+    private float shotGunSpreadAngle = 10f; //총알 각도 
 
     float MoveWalkSpeed = 5.0f;  //일반 이동속도
     float MoveRunSpeed = 10.0f; //달리기 이동속도 
@@ -121,6 +123,11 @@ public class PlayerManager : MonoBehaviour
     private bool isFlashLightOn;
 
 
+    private Rigidbody[] ragdollbodies;
+    private Collider[] ragdollcollider;
+
+    public GameObject GunUI;
+    public GameObject HPUI;
     private void Awake()
     {
         if (Instance == null)
@@ -156,6 +163,11 @@ public class PlayerManager : MonoBehaviour
         }
 
         flashLight.enabled = false;
+
+        ragdollbodies = GetComponentsInChildren<Rigidbody>();
+        ragdollcollider = GetComponentsInChildren<Collider>();
+        GunUI.SetActive(false);
+        HPUI.SetActive(true);
     }
 
     void Update()
@@ -219,7 +231,7 @@ public class PlayerManager : MonoBehaviour
         if (Input.GetMouseButtonDown(1) && !isAiming)   //오른쪽 마우스 버튼을 눌렀을 때
         {
             isAiming = true;
-            
+            GunUI.SetActive(true);
             AimWeapon();
 
             if (zoomCoroutine != null)
@@ -246,6 +258,7 @@ public class PlayerManager : MonoBehaviour
         }
         if (Input.GetMouseButtonUp(1) && isAiming)    //오른쪽 마우스 버튼을 땠을 때
         {
+            GunUI.SetActive(false);
             isAiming = false; //조준중 false
             animator.SetLayerWeight(1, 0); //레이어1 비활성화 
 
@@ -331,6 +344,10 @@ public class PlayerManager : MonoBehaviour
             ToggleFlashLight();
         }
 
+        if (HP <= 0)
+        {
+            ActivateRagdoll();
+        }
     }
 
     private void ToggleFlashLight()
@@ -565,6 +582,7 @@ public class PlayerManager : MonoBehaviour
 
     void AimWeapon()
     {
+        
         animator.SetLayerWeight(1, 1);
         if ((WeaponManager.instance.GetCurrentWeaponType() == Weapon.WeaponType.Pistol))
         {
@@ -630,38 +648,77 @@ public class PlayerManager : MonoBehaviour
     }
 
 
-    void FirePistol() //1
+    void FirePistol()
     {
         animator.SetTrigger("FirePistol");
         SoundManager.instance.PlaySFX("FirePistol", transform.position);
 
-        Weapon currentWeapon = WeaponManager.instance.GetCurrentWeaponComponent();
+        Weapon currenWeapon = WeaponManager.instance.GetCurrentWeaponComponent();
 
-        ParticleManager.instance.PlayParticle(ParticleManager.ParticleType.Pistoleffect, currentWeapon.effectPos.transform.position);
+        if (currenWeapon == null)
+        {
+            Debug.LogError("현재 무기가 할당되지 않았습니다.");
+            return;
+        }
 
+        // 파티클 재생 (총알 효과)
+        if (ParticleManager.instance != null)
+        {
+            ParticleManager.instance.PlayParticle(ParticleManager.ParticleType.PistolEffect, currenWeapon.effectPos.position);
+        }
+        else
+        {
+            Debug.LogError("ParticleManager 인스턴스가 없습니다.");
+            return;
+        }
         RaycastHit hit;
+
         Vector3 origin = Camera.main.transform.position;
-        Vector2 direction = Camera.main.transform.forward;
+        Vector3 direction = Camera.main.transform.forward;
 
-        rayDistance = 100; //총 사정거리
+        rayDistance = 100f;//총 사정거리
 
-        Debug.DrawRay(origin, direction * rayDistance,Color.red,1.0f);  //1.0f -> 1초 동안
+        Debug.DrawRay(origin, direction * rayDistance, Color.red, 1.0f);
 
         if (Physics.Raycast(origin, direction * rayDistance, out hit))
         {
-            if (hit.collider.tag != "Zombie")
+            if (hit.collider != null)
             {
-                ParticleManager.instance.PlayParticle(ParticleManager.ParticleType.BrickImpact, hit.point);
+                if (hit.collider.tag == "Ground")
+                {
+                    ParticleManager.instance.PlayParticle(ParticleManager.ParticleType.BrickImpact, hit.point);
+                    return;
+                }
+
+                if (hit.collider.tag == "Zombie")
+                {
+                    ZombieAI zombieAI = hit.collider.GetComponent<ZombieAI>();
+
+                    if (zombieAI != null)
+                    {
+                        //함수 호출
+                        zombieAI.TakeDamage(5, hit.collider.tag);
+                    }
+                }
+                else if (hit.collider.tag == "Head")
+                {
+                    ZombieAI zombieAI = hit.collider.GetComponentInParent<ZombieAI>();
+
+                    if (zombieAI != null)
+                    {
+                        //함수 호출
+                        zombieAI.TakeDamage(5, hit.collider.tag);
+                    }
+                }
             }
         }
+
     }
 
-    void FireShotGun() //2
+    void FireShotGun()
     {
         animator.SetTrigger("FireShotGun");
-        SoundManager.instance.PlaySFX("FireShotGun", transform.position);
-        GameObject effectPos = GameObject.Find("ShotGunEffectPos");
-        ParticleManager.instance.PlayParticle(ParticleManager.ParticleType.ShotGunEffect, effectPos.transform.position);
+        //SoundManager.instance.PlaySFX("FireShotGun");
 
         rayDistance = 250f;
 
@@ -671,62 +728,61 @@ public class PlayerManager : MonoBehaviour
 
             Vector3 origin = Camera.main.transform.position;
 
-            float spreadX = Random.Range(-shotGunspreadAngle,shotGunspreadAngle);
-            float spreadY = Random.Range(-shotGunspreadAngle,shotGunspreadAngle);
+            float spreadX = Random.Range(-shotGunSpreadAngle, shotGunSpreadAngle);
+            float spreadY = Random.Range(-shotGunSpreadAngle, shotGunSpreadAngle);
 
-            Vector3 spreadDirection = Quaternion.Euler(spreadX,spreadY,0) * Camera.main.transform.forward;
+            Vector3 spreadDirection = Quaternion.Euler(spreadX, spreadY, 0) * Camera.main.transform.forward;
 
             Debug.DrawRay(origin, spreadDirection * rayDistance, Color.red, 1.0f);
 
             if (Physics.Raycast(origin, spreadDirection, out hit, rayDistance, hitLayer))
             {
-                Debug.Log("Hit :" + hit.collider.name);
+                Debug.Log("Hit : " + hit.collider.name);
             }
+
         }
     }
 
-    void FireRifle() //3
+    void FireRifle()
     {
         animator.SetTrigger("FireRifle");
-        SoundManager.instance.PlaySFX("FireRifle", transform.position);
-        GameObject effectPos = GameObject.Find("RifleEffectPos");
-        ParticleManager.instance.PlayParticle(ParticleManager.ParticleType.RifleEffect, effectPos.transform.position);
+        //SoundManager.instance.PlaySFX("FireRifle");
 
         RaycastHit hit;
+
         Vector3 origin = Camera.main.transform.position;
-        Vector2 direction = Camera.main.transform.forward;
+        Vector3 direction = Camera.main.transform.forward;
 
-        rayDistance = 1000; //총 사정거리
+        rayDistance = 1000f;//총 사정거리
 
-        Debug.DrawRay(origin, direction * rayDistance, Color.red, 1.0f);  //1.0f -> 1초 동안
+        Debug.DrawRay(origin, direction * rayDistance, Color.red, 1.0f);
 
         if (Physics.Raycast(origin, direction * rayDistance, out hit, hitLayer))
         {
-            Debug.Log("Hit: " + hit.collider.name);
+            Debug.Log("Hit : " + hit.collider.name);
         }
     }
 
-    void FireSMG() //4
+    void FireSMG()
     {
         animator.SetTrigger("FireSMG");
-        SoundManager.instance.PlaySFX("FireSMG", transform.position);
-        GameObject effectPos = GameObject.Find("SMGEffectPos");
-        ParticleManager.instance.PlayParticle(ParticleManager.ParticleType.SMGEffect, effectPos.transform.position);
-
+        // SoundManager.instance.PlaySFX("FireSMG");
 
         RaycastHit hit;
+
         Vector3 origin = Camera.main.transform.position;
-        Vector2 direction = Camera.main.transform.forward;
+        Vector3 direction = Camera.main.transform.forward;
 
-        rayDistance = 200; //총 사정거리
+        rayDistance = 200f;//총 사정거리
 
-        Debug.DrawRay(origin, direction * rayDistance, Color.red, 1.0f);  //1.0f -> 1초 동안
+        Debug.DrawRay(origin, direction * rayDistance, Color.red, 1.0f);
 
         if (Physics.Raycast(origin, direction * rayDistance, out hit, hitLayer))
         {
-            Debug.Log("Hit: " + hit.collider.name);
+            Debug.Log("Hit : " + hit.collider.name);
         }
     }
+
 
     void ChangeWeapon()
     {
@@ -865,6 +921,24 @@ public class PlayerManager : MonoBehaviour
         yield return new WaitForSeconds(FireDelay);
 
         isFire = true;
+    }
+
+    private void SetRagdollState(bool state)
+    {
+        foreach (Rigidbody body in ragdollbodies)
+        {
+            body.isKinematic = !state;
+        }
+        foreach (Collider collider in ragdollcollider)
+        {
+            collider.enabled = state;
+        }
+    }
+
+    public void ActivateRagdoll()
+    {
+        animator.enabled = false;
+        SetRagdollState(true);
     }
 }
 

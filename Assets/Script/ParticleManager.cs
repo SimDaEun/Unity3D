@@ -8,7 +8,7 @@ public class ParticleManager : MonoBehaviour
 
     public enum ParticleType
     {
-        Pistoleffect,
+        PistolEffect,
         ShotGunEffect,
         RifleEffect,
         SMGEffect,
@@ -45,7 +45,7 @@ public class ParticleManager : MonoBehaviour
             Destroy(gameObject);
         }
 
-        particleDic.Add(ParticleType.Pistoleffect, pistolEffect);
+        particleDic.Add(ParticleType.PistolEffect, pistolEffect);
         particleDic.Add(ParticleType.ShotGunEffect, shotGunEffect);
         particleDic.Add(ParticleType.RifleEffect, RifleEffect);
         particleDic.Add(ParticleType.SMGEffect, SMGEffect);
