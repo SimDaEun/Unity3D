@@ -128,6 +128,8 @@ public class PlayerManager : MonoBehaviour
 
     public GameObject GunUI;
     public GameObject HPUI;
+
+    private bool lastOpenedForward = true;  //마지막으로 문이 정방향으로 열렸는지 여부 
     private void Awake()
     {
         if (Instance == null)
@@ -513,18 +515,6 @@ public class PlayerManager : MonoBehaviour
     }
 
 
-    //발소리 방법 2 (애니메이션에 이벤트 함수 추가)
-    //public bool StepSoundPlay(Transform foot)
-    //{
-    //    Vector3 rayStart = foot.position + Vector3.up * 0.05f;
-    //    if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit hit, 0.1f))
-    //    {
-    //        SoundManager.instance.PlayFootSound(hit.collider.tag);
-    //        return true;
-    //    }
-    //    return false;
-    //}
-
     //게임 오버 함수
     void GameOver()
     {
@@ -823,8 +813,34 @@ public class PlayerManager : MonoBehaviour
 
         foreach (RaycastHit hit in hits)
         {
-            GameObject item = hit.collider.gameObject;
+            GameObject item = hit.collider.gameObject;   //hit의 콜라이더의 게임오브젝틀르 가져와 item이라는 변수에 넣음 
             Debug.Log(hit.collider.name);
+
+            DoorBase door = item.GetComponent<DoorBase>();  //DoorBase라는 컴포넌트가 있으면 가져옴 
+
+            if (door != null)   //door이 null이 아니면 실행 
+            {
+                if (door.isOpen)  //문이 열려있으면 
+                {
+                    if (lastOpenedForward)  //문이 정방향으로 열려있으면 
+                    {
+                        door.CloseForward(transform);  //정방향으로 닫음 
+                    }
+                    else
+                    {
+                        door.CloseBackward(transform); //반대 방향으로 닫음 
+                    }
+                }
+                else  //문이 안열려있으면 
+                {
+                    if (door.Open(transform))
+                    {
+                        lastOpenedForward = door.LastOpenForward;
+                    }
+                }
+
+                return;
+            }
 
             if (item.CompareTag("Weapon"))
             {

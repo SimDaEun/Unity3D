@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.SocialPlatforms.Impl;
 using UnityEngine.UI;
 
@@ -115,4 +116,15 @@ public class GameSettingManager : MonoBehaviour
     {
         option.SetActive(false);
     }
+
+    public void GameStart()
+    {
+        SceneManager.LoadScene("Level1");
+    }
+
+    public void OptionStart()
+    {
+        option.SetActive(true);
+    }
+
 }
