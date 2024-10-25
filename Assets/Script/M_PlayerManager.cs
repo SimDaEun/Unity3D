@@ -5,9 +5,11 @@ using UnityEngine;
 
 public class M_PlayerManager : MonoBehaviour
 {
+    public static M_PlayerManager instance;
     //-----------------Player Move---------------------//
-    float MoveWalkSpeed = 3.0f;  //일반 이동속도
-    float MoveRunSpeed = 6.0f; //달리기 이동속도 
+    float MoveWalkSpeed = 4.6f;  //일반 이동속도
+    float MoveRunSpeed = 8.0f; //달리기 이동속도 
+    float JumpHeight = 10.0f; //점프 높이
     float currentSpeed = 1.0f;  //변경 속도
     bool isRunning = false;    // 달리고 있는지 확인하기 
     float gravity = -9.81f;   //중력
@@ -41,7 +43,32 @@ public class M_PlayerManager : MonoBehaviour
 
     Animator animator;
 
+
+    //-------------GameObject---------------------//
     public GameObject confetti;
+    public GameObject SuccessPanel;
+    public GameObject FailPanel;
+    public GameObject TimeOverPanel;
+    public GameObject Timer;
+    public GameObject MissionPanel;
+    public GameObject AddTime;
+    public GameObject JumpItem;
+
+    private bool hasJumpItem = false;
+    private bool isUsedAddTime = false;
+    public bool isFloating = false;  //공중에 떠 있는지 확인하는 변수
+    private void Awake()
+    {
+        if (instance == null)
+        {
+            instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
 
     void Start()
     {
@@ -54,6 +81,13 @@ public class M_PlayerManager : MonoBehaviour
         characterController = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
         confetti.SetActive(false);
+        SuccessPanel.SetActive(false);
+        FailPanel.SetActive(false);
+        TimeOverPanel.SetActive(false);
+        Timer.SetActive(false);
+        MissionPanel.SetActive(false);
+        AddTime.SetActive(false);
+        JumpItem.SetActive(false);
     }
 
     void Update()
@@ -80,7 +114,12 @@ public class M_PlayerManager : MonoBehaviour
         animator.SetFloat("Vertical", vertical);
 
         Vector3 move = transform.right * horizontal + transform.forward * vertical;
-        velocity.y += gravity * Time.deltaTime;
+
+        if (!isFloating)
+        {
+            velocity.y += gravity * Time.deltaTime;
+        }
+        characterController.Move(velocity * Time.deltaTime); //추가 (중력)
         characterController.Move(move * currentSpeed * Time.deltaTime);
 
         if (Input.GetKey(KeyCode.LeftShift))  //Shift키 누르면 달리는 애니메이션
@@ -95,7 +134,10 @@ public class M_PlayerManager : MonoBehaviour
         currentSpeed = isRunning ? MoveRunSpeed : MoveWalkSpeed;  //달리는 중이면 currentSpeed에 달리는 속도, 아니면 걷는 속도 대입
         animator.SetBool("isRunning", isRunning);
 
+
         CameraPosition();
+
+
 
         //현재 위치와 이전 위치의 차이를 계산하는 함수
         float distanceMoved = Vector3.Distance(transform.position, previousPosition);
@@ -122,6 +164,8 @@ public class M_PlayerManager : MonoBehaviour
             isLeftFootGround = leftHit;
             isRightFootGround = rightHit;
         }
+
+
     }
 
 
@@ -136,6 +180,11 @@ public class M_PlayerManager : MonoBehaviour
         cameraTransfrom.LookAt(transform.position + new Vector3(0, thirdPersonOffset.y, 0));
     }
 
+    void FloatingCameraPosition()
+    { 
+
+    }
+
     bool CheckGround(Transform foot)
     {
         Vector3 rayStart = foot.position + Vector3.down * 0.1f;
@@ -148,18 +197,84 @@ public class M_PlayerManager : MonoBehaviour
     }
 
 
+
+    private void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        if (hit.gameObject.name == "Clock" && !isUsedAddTime)
+        {
+            //Sound 재생
+            hit.gameObject.SetActive(false);
+            AddTime.SetActive(true);
+            isUsedAddTime = true;
+            StartCoroutine(ShowGameObj(AddTime, 1.0f));
+            ItemClock();
+        }
+
+        if (hit.gameObject.name.StartsWith("soccer"))
+        {
+            hasJumpItem = true;
+            hit.gameObject.SetActive(false);
+            ItemBoots();
+        }
+    }
+
     private void OnTriggerExit(Collider other)  //Trigger에서 벗어나면 UI 비활성화 되도록 하는 함수
     {
-            Debug.Log("Start/End 오브젝트 비활성화");
         if (other.tag == "StartEnd")
         {
             other.gameObject.SetActive(false);
         }
-
+        if (other.name == "Start")
+        {
+            Timer.SetActive(true);
+            StartCoroutine(ShowGameObj(MissionPanel,2.0f));
+        }
         if(other.name == "End")
         {
             confetti.SetActive(true);
+            SuccessPanel.SetActive(true);
         }
+
     }
 
+    IEnumerator ShowGameObj(GameObject gameObj,float seconds)
+    {
+        gameObj.SetActive(true);
+
+        yield return new WaitForSeconds(seconds);
+
+        gameObj.SetActive(false);
+    }
+
+    private void ItemBoots()
+    {
+        if (!isFloating)
+        {
+            StartCoroutine(Floating(5.0f));
+        }
+
+    }
+
+    private void ItemClock()
+    {
+        TimerManager.instance.LimitTime += 30;
+    }
+    IEnumerator Floating(float duration)
+    {
+        Debug.Log("공중에 뜨는 코루틴 실행");
+        isFloating = true;
+        float jumpMultiplier = 1.5f;
+
+        Vector3 jump = new Vector3(0, JumpHeight, 0);
+        velocity.y = Mathf.Sqrt(JumpHeight * -2f * gravity * Time.deltaTime) * jumpMultiplier;
+
+        //증력을 일시적으로 무시해 공중에 머무르도록 함
+        float originalGravity = gravity;
+        gravity = 0;
+
+        yield return new WaitForSeconds(duration);  
+
+        gravity = originalGravity;
+        isFloating = false;
+    }
 }
