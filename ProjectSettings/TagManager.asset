@@ -12,6 +12,7 @@ TagManager:
   - Head
   - Zombie
   - StartEnd
+  - Enemy
   layers:
   - Default
   - TransparentFX

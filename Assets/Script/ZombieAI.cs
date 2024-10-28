@@ -102,7 +102,7 @@ public class ZombieAI : MonoBehaviour
         //플레이어가 공격 범위 안에 있고 공격 중이 아닐 때 공격 
         if (distanceToPlayer <= attackRange && !isAttacking) 
         {
-            //딜레이를 고력해서 공격할 수 있는 상태가 아니면 함수가 실행되지 않도록 조건을 추가한 것 
+            //딜레이를 고려해서 공격할 수 있는 상태가 아니면 함수가 실행되지 않도록 조건을 추가한 것 
             if (!isAttacking)
             {
                 currentState = ZombieState.Attack;
@@ -204,7 +204,7 @@ public class ZombieAI : MonoBehaviour
 
     void AttackPlayer()
     {
-        if (isAttacking) return;  //공격 중이라면 다시 공격하지 안흥ㅁ
+        if (isAttacking) return;  //공격 중이라면 다시 공격하지 않음
 
         isAttacking = true;
 

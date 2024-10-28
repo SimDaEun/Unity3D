@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEditor;
 using UnityEngine;
 
@@ -12,10 +13,13 @@ public class M_PlayerManager : MonoBehaviour
     float JumpHeight = 10.0f; //점프 높이
     float currentSpeed = 1.0f;  //변경 속도
     bool isRunning = false;    // 달리고 있는지 확인하기 
-    float gravity = -9.81f;   //중력
+    float gravity = -20f;   //중력
     Vector3 velocity;         //현재 속도 저장
     CharacterController characterController;  //캐릭터컨트롤러
+    public GameObject PlayerHead;
 
+    float mouseX;
+    float mouseY;
 
     //-----------------------Camera Settings------------------------//
     Camera mainCamera;
@@ -50,13 +54,19 @@ public class M_PlayerManager : MonoBehaviour
     public GameObject FailPanel;
     public GameObject TimeOverPanel;
     public GameObject Timer;
+    public GameObject JumpPanel;
     public GameObject MissionPanel;
     public GameObject AddTime;
-    public GameObject JumpItem;
 
-    private bool hasJumpItem = false;
     private bool isUsedAddTime = false;
     public bool isFloating = false;  //공중에 떠 있는지 확인하는 변수
+    public bool isShaking = false;
+
+    [Header("CameraShake Setting")]
+    public float shakeDuration = 0.3f;  //흔들림 지속 시간
+    public float shakeMagnitude = 0.2f; //흔들림 강도
+    
+
     private void Awake()
     {
         if (instance == null)
@@ -85,9 +95,9 @@ public class M_PlayerManager : MonoBehaviour
         FailPanel.SetActive(false);
         TimeOverPanel.SetActive(false);
         Timer.SetActive(false);
+        JumpPanel.SetActive(false); 
         MissionPanel.SetActive(false);
         AddTime.SetActive(false);
-        JumpItem.SetActive(false);
     }
 
     void Update()
@@ -97,16 +107,8 @@ public class M_PlayerManager : MonoBehaviour
         float vertical = Input.GetAxis("Vertical");
 
         //마우스 회전 값 가져오기
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
-
-        yaw += mouseX;  //좌우 회전값 + 마우스 회전값 (기준 y)
-        pitch = 20f;  //위아래 회전값 + 마우스 회전값 (기준x)
-
-        //pitch = Mathf.Clamp(pitch, -20f, 20f);  //위아래 회전 제한 
-
-        transform.rotation = Quaternion.Euler(0, yaw, 0); //플레이어에 대한 로테이션
-        cameraTransfrom.rotation = Quaternion.Euler(pitch, yaw, 0);
+        mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
+        mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
 
 
 
@@ -118,9 +120,11 @@ public class M_PlayerManager : MonoBehaviour
         if (!isFloating)
         {
             velocity.y += gravity * Time.deltaTime;
+            characterController.Move(move * currentSpeed * Time.deltaTime);
         }
         characterController.Move(velocity * Time.deltaTime); //추가 (중력)
-        characterController.Move(move * currentSpeed * Time.deltaTime);
+
+
 
         if (Input.GetKey(KeyCode.LeftShift))  //Shift키 누르면 달리는 애니메이션
         {
@@ -134,9 +138,19 @@ public class M_PlayerManager : MonoBehaviour
         currentSpeed = isRunning ? MoveRunSpeed : MoveWalkSpeed;  //달리는 중이면 currentSpeed에 달리는 속도, 아니면 걷는 속도 대입
         animator.SetBool("isRunning", isRunning);
 
+        if (!isFloating)
+        {
+            CameraPosition();
+        }
+        else
+        {
+            FloatingCameraPosition();
+        }
 
-        CameraPosition();
-
+        if (!isFloating && CheckGround(leftFoot))
+        {
+            isFloating = false;
+        }
 
 
         //현재 위치와 이전 위치의 차이를 계산하는 함수
@@ -171,6 +185,14 @@ public class M_PlayerManager : MonoBehaviour
 
     void CameraPosition()
     {
+        yaw += mouseX;  //좌우 회전값 + 마우스 회전값 (기준 y)
+        pitch = 20f;  //위아래 회전값 + 마우스 회전값 (기준x)
+        //pitch = Mathf.Clamp(pitch, -20f, 20f);  //위아래 회전 제한 
+
+        transform.rotation = Quaternion.Euler(0, yaw, 0); //플레이어에 대한 로테이션
+        cameraTransfrom.rotation = Quaternion.Euler(pitch, yaw, 0);
+
+
         transform.rotation = Quaternion.Euler(0, yaw, 0);
         Vector3 direction = new Vector3(0, 0, -currentDistance);
         cameraTransfrom.rotation = Quaternion.Euler(pitch, yaw, 0);
@@ -181,8 +203,22 @@ public class M_PlayerManager : MonoBehaviour
     }
 
     void FloatingCameraPosition()
-    { 
+    {
+        yaw += mouseX;  //좌우 회전값 + 마우스 회전값 (기준 y)
+        pitch = 30f;  //위아래 회전값 + 마우스 회전값 (기준x)
+        //pitch = Mathf.Clamp(pitch, -45f, 45f);  //위아래 회전 제한 
 
+        transform.rotation = Quaternion.Euler(0, yaw, 0); //플레이어에 대한 로테이션
+        cameraTransfrom.rotation = Quaternion.Euler(pitch, yaw, 0);
+
+
+        transform.rotation = Quaternion.Euler(0, yaw, 0);
+        Vector3 direction = new Vector3(0, 0, -currentDistance);
+        cameraTransfrom.rotation = Quaternion.Euler(pitch, yaw, 0);
+
+        //cameraTransfrom.position = transform.position + thirdPersonOffset + Quaternion.Euler(pitch, yaw, 0) * direction;
+        cameraTransfrom.position = PlayerHead.transform.position; //플레이어 머리 위치로 카메라 이동
+        //cameraTransfrom.LookAt(transform.position + new Vector3(0, thirdPersonOffset.y, 0));
     }
 
     bool CheckGround(Transform foot)
@@ -212,9 +248,16 @@ public class M_PlayerManager : MonoBehaviour
 
         if (hit.gameObject.name.StartsWith("soccer"))
         {
-            hasJumpItem = true;
             hit.gameObject.SetActive(false);
+            StartCoroutine(ShowGameObj(JumpPanel, 1.0f));
             ItemBoots();
+        }
+
+        if (hit.gameObject.tag == "Enemy")
+        {
+            FailPanel.SetActive(true);
+            Time.timeScale = 0;
+            //StartCoroutine(Shake(shakeDuration, shakeMagnitude));
         }
     }
 
@@ -237,7 +280,7 @@ public class M_PlayerManager : MonoBehaviour
 
     }
 
-    IEnumerator ShowGameObj(GameObject gameObj,float seconds)
+    IEnumerator ShowGameObj(GameObject gameObj,float seconds)  //무슨 아이템 먹었는지 n초간 화면에 띄움
     {
         gameObj.SetActive(true);
 
@@ -252,7 +295,6 @@ public class M_PlayerManager : MonoBehaviour
         {
             StartCoroutine(Floating(5.0f));
         }
-
     }
 
     private void ItemClock()
@@ -261,12 +303,15 @@ public class M_PlayerManager : MonoBehaviour
     }
     IEnumerator Floating(float duration)
     {
+        FloatingCameraPosition();
         Debug.Log("공중에 뜨는 코루틴 실행");
         isFloating = true;
         float jumpMultiplier = 1.5f;
 
         Vector3 jump = new Vector3(0, JumpHeight, 0);
         velocity.y = Mathf.Sqrt(JumpHeight * -2f * gravity * Time.deltaTime) * jumpMultiplier;
+        velocity.x = 0;
+        velocity.z = 0;
 
         //증력을 일시적으로 무시해 공중에 머무르도록 함
         float originalGravity = gravity;
@@ -277,4 +322,32 @@ public class M_PlayerManager : MonoBehaviour
         gravity = originalGravity;
         isFloating = false;
     }
+
+    //public IEnumerator Shake(float duration, float magnitude)
+    //{
+    //    Debug.Log("Camera Shake");
+    //    if (mainCamera == null)
+    //    {
+    //        Debug.Log("MainCamera가 없습니다.");
+    //        yield break;
+    //    }
+
+    //    isShaking = true;
+        
+    //    float elapsed = 0f;  //경과 시간 초기화
+
+    //    while (elapsed < duration)
+    //    {
+    //        float x = Random.Range(-1f, 1f) * magnitude;
+    //        float y = Random.Range(-1f, 1f) * magnitude;
+
+    //        mainCamera.transform.localPosition = new Vector3(transform.position.x+x, transform.position.y+y,-10);
+
+    //        elapsed += Time.deltaTime;
+    //        yield return null;
+    //    }
+
+    //    mainCamera.transform.localPosition = transform.position;
+    //    isShaking = false;
+    //}
 }
