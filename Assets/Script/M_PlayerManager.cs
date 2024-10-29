@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Threading;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using static Cinemachine.DocumentationSortingAttribute;
 
 public class M_PlayerManager : MonoBehaviour
 {
@@ -90,14 +92,100 @@ public class M_PlayerManager : MonoBehaviour
         mainCamera.fieldOfView = defaultFov;  //기본 fov 설정
         characterController = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
-        confetti.SetActive(false);
+
+        Timer.SetActive(false);
         SuccessPanel.SetActive(false);
         FailPanel.SetActive(false);
         TimeOverPanel.SetActive(false);
-        Timer.SetActive(false);
-        JumpPanel.SetActive(false); 
+        confetti.SetActive(false);
+        JumpPanel.SetActive(false);
         MissionPanel.SetActive(false);
         AddTime.SetActive(false);
+    }
+
+    void OnLevelWasLoaded()
+    {
+        Time.timeScale = 1;
+        if (SuccessPanel != null)
+        {
+            SuccessPanel.SetActive(false);
+        }
+        else
+        {
+            SuccessPanel = GameObject.Find("SuccessPanel");
+            SuccessPanel.SetActive(false);
+        }
+
+
+        if (FailPanel != null)
+        {
+            FailPanel.SetActive(false);
+        }
+        else
+        {
+            FailPanel = GameObject.Find("FailPanel");
+            FailPanel.SetActive(false);
+        }
+
+        if (confetti != null)
+        {
+            confetti.SetActive(false);
+        }
+        else
+        {
+            confetti = GameObject.Find("confetti");
+            confetti.SetActive(false);
+        }
+
+        if (Timer != null)
+        {
+            Timer.SetActive(false);
+        }
+        else
+        {
+            Timer = GameObject.Find("Timer");
+            Timer.SetActive(false);
+        }
+
+        if (TimeOverPanel != null)
+        {
+            TimeOverPanel.SetActive(false);
+        }
+        else
+        {
+            TimeOverPanel = GameObject.Find("TimeOverPanel");
+            TimeOverPanel.SetActive(false);
+        }
+
+        if (JumpPanel != null)
+        {
+            JumpPanel.SetActive(false);
+        }
+        else
+        {
+            JumpPanel = GameObject.Find("JumpPanel");
+            JumpPanel.SetActive(false);
+        }
+
+        if (MissionPanel != null)
+        {
+            MissionPanel.SetActive(false);
+        }
+        else
+        {
+            MissionPanel = GameObject.Find("MissionPanel");
+            MissionPanel.SetActive(false);
+        }
+
+        if (AddTime != null)
+        {
+            AddTime.SetActive(false);
+        }
+        else
+        {
+            AddTime = GameObject.Find("AddTimePanel");
+            AddTime.SetActive(false);
+        }
     }
 
     void Update()
@@ -255,8 +343,9 @@ public class M_PlayerManager : MonoBehaviour
 
         if (hit.gameObject.tag == "Enemy")
         {
-            FailPanel.SetActive(true);
             Time.timeScale = 0;
+            FailPanel.SetActive(true);
+            Cursor.lockState = CursorLockMode.None;   //마우스 커서 풀린 상태
             //StartCoroutine(Shake(shakeDuration, shakeMagnitude));
         }
     }
@@ -276,6 +365,7 @@ public class M_PlayerManager : MonoBehaviour
         {
             confetti.SetActive(true);
             SuccessPanel.SetActive(true);
+            Cursor.lockState = CursorLockMode.None;   //마우스 커서 풀린 상태
         }
 
     }
@@ -333,7 +423,7 @@ public class M_PlayerManager : MonoBehaviour
     //    }
 
     //    isShaking = true;
-        
+
     //    float elapsed = 0f;  //경과 시간 초기화
 
     //    while (elapsed < duration)
@@ -350,4 +440,6 @@ public class M_PlayerManager : MonoBehaviour
     //    mainCamera.transform.localPosition = transform.position;
     //    isShaking = false;
     //}
+
+
 }

@@ -23,11 +23,6 @@ public class TimerManager : MonoBehaviour
             Destroy(gameObject);
         }
     }
-    void Start()
-    {
-        
-    }
-
     private void Update()
     {
         if (!M_PlayerManager.instance.isFloating)
@@ -50,6 +45,7 @@ public class TimerManager : MonoBehaviour
         {
             M_PlayerManager.instance.TimeOverPanel.SetActive(true);
             Time.timeScale = 0;
+            Cursor.lockState = CursorLockMode.None;   //마우스 커서 풀린 상태
         }
     }
 
