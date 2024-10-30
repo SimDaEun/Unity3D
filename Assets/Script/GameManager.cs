@@ -1,7 +1,4 @@
-using System.Collections;
-using System.Collections.Generic;
-using System.Net;
-using UnityEditor.Rendering.PostProcessing;
+
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -20,7 +17,7 @@ public class GameManager : MonoBehaviour
             instance = this;
             DontDestroyOnLoad(gameObject);
             
-            Debug.Log("awake");
+            Debug.Log("GameManager awake");
         }
         else
         {
@@ -86,6 +83,8 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log("Exit");
         SceneManager.LoadScene("StartScene");
+        SoundManager.instance.StopBGM();
+        SoundManager.instance.PlayBGM("StartBGM");
         //Application.Quit();  
     }
 
@@ -98,11 +97,12 @@ public class GameManager : MonoBehaviour
 
         Destroy(instance.gameObject);
 
+
+        //SceneChanger.instance.OnNowSceneReloaded();
         Scene currentScene = SceneManager.GetActiveScene();
         SceneManager.LoadScene(currentScene.name);
-        M_PlayerManager.instance.gameObject.GetComponent<CharacterController>().enabled = false;
-        M_PlayerManager.instance.gameObject.transform.position = DefaultPos.transform.position;
-        M_PlayerManager.instance.gameObject.GetComponent<CharacterController>().enabled = true;
+
+
         //SoundManager.instance.PlayBGM(currentScene.name+"BGM");
     }
     public void Help()
@@ -112,5 +112,10 @@ public class GameManager : MonoBehaviour
     public void CloseHelp()
     {
         HelpImage.SetActive(false);
+    }
+
+    public void GameExit()
+    {
+        Application.Quit();
     }
 }

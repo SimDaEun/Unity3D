@@ -21,7 +21,9 @@ public class TimerManager : MonoBehaviour
         else
         {
             Destroy(gameObject);
+            instance = this;
         }
+        LimitTime = 50f;
     }
     private void Update()
     {
@@ -41,14 +43,15 @@ public class TimerManager : MonoBehaviour
         }
 
         //타이머가 0이하이면 게임 멈춤 + 타임오버 패널 띄움
-        if (TimerManager.instance.LimitTime <= 0)
+        if (LimitTime <= 0)
         {
+            Debug.Log("Time Over !");
             M_PlayerManager.instance.TimeOverPanel.SetActive(true);
             Time.timeScale = 0;
             Cursor.lockState = CursorLockMode.None;   //마우스 커서 풀린 상태
+            SoundManager.instance.StopBGM();
         }
     }
-
     private void ChangeTime()
     {
         LimitTime -= Time.deltaTime;

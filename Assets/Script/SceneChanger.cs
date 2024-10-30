@@ -16,7 +16,7 @@ public class SceneChanger : MonoBehaviour
     public Image blackPanel;
     public float fadeDuration = 1.0f;
     bool isFading = false;
-    int currentSceneindex;
+    public int currentSceneindex;
 
     private void Awake()
     {
@@ -30,7 +30,17 @@ public class SceneChanger : MonoBehaviour
             Destroy(gameObject);
         }
     }
-    void Start()
+
+    //void OnLevelWasLoaded()
+    //{
+    //    Debug.Log("SceneChanger OnLevelWasLoaded");
+    //    if (!blackPanel)
+    //    {
+    //        blackPanel = Image.Find("BlackCanvas").transform.GetChild(0).gameObject;
+    //        black.SetActive(false);
+    //    }
+    //}
+        void Start()
     {
         if (SceneManager.GetActiveScene().name == "LogoScene")
         {
@@ -76,6 +86,13 @@ public class SceneChanger : MonoBehaviour
         StartCoroutine(FadeInAndLoadScene());
     }
 
+    public void OnNowSceneReloaded()
+    {
+        Debug.Log("현재 씬 재로드");
+        currentSceneindex = SceneManager.GetActiveScene().buildIndex;
+        Debug.Log(currentSceneindex);
+        StartCoroutine(FadeInAndReloadScene());
+    }
     public IEnumerator FadeInAndLoadScene()
     {
         isFading = true;
@@ -89,12 +106,29 @@ public class SceneChanger : MonoBehaviour
         Debug.Log("Fade Out");
 
         // 씬에 따른 BGM 재생
-        //PlaySceneBGM();
+        PlaySceneBGM();
 
         isFading = false;  
     }
 
-    
+    public IEnumerator FadeInAndReloadScene()
+    {
+        isFading = true;
+
+        yield return StartCoroutine(FadeImage(0, 1, fadeDuration));
+        Debug.Log("Fade In");
+
+        SceneManager.LoadScene(currentSceneindex);
+
+        yield return StartCoroutine(FadeImage(1, 0, fadeDuration));
+        Debug.Log("Fade Out");
+
+        // 씬에 따른 BGM 재생
+        PlaySceneBGM();
+
+        isFading = false;
+    }
+
     public IEnumerator FadeImage(float startAlpha, float endAlpha, float duration)
     {
         float elapsedTime = 0f;
@@ -118,31 +152,23 @@ public class SceneChanger : MonoBehaviour
         blackPanel.color = panelColor;
     }
 
-    private void GameExit()
+    public void GameExit()
     {
         Application.Quit();
     }
 
-    // 각 씬에 맞는 배경음악 재생
-    //public void PlaySceneBGM()
-    //{
-    //    string sceneName = SceneManager.GetActiveScene().name;
+    //각 씬에 맞는 배경음악 재생
+    public void PlaySceneBGM()
+    {
+        string sceneName = SceneManager.GetActiveScene().name;
 
-    //    if (sceneName == "GameScene1")
-    //    {
-    //        SoundManager.instance.PlayBGM("GameScene1BGM");
-    //    }
-    //    else if (sceneName == "GameScene2")
-    //    {
-    //        SoundManager.instance.PlayBGM("GameScene2BGM");
-    //    }
-    //    else if (sceneName == "GameScene3")
-    //    {
-    //        SoundManager.instance.PlayBGM("GameScene3BGM");
-    //    }
-    //    else
-    //    {
-    //        SoundManager.instance.PlayBGM("DefaultBGM");
-    //    }
-    //}
+        if (sceneName == "StartScene")
+        {
+            SoundManager.instance.PlayBGM("StartBGM");
+        }
+        else if (sceneName == "GameScene1")
+        {
+            SoundManager.instance.PlayBGM("ReadyBGM");
+        }
+    }
 }

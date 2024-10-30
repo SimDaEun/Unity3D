@@ -6,6 +6,7 @@ using UnityEngine.AI;
 
 public class BearAI : MonoBehaviour
 {
+    //public static BearAI instance;
     public enum BearState
     {
        Idle, Patrol,Chase, Attack
@@ -14,7 +15,7 @@ public class BearAI : MonoBehaviour
     public BearState currentState;
 
     public Transform[] patrolPoints; //순찰 지점들
-    private Transform Player; //플레이어의 Transform
+    GameObject Player; //플레이어의 Transform
     public float detectionRange = 7f;  //플레이어 감지 범위
     public float attackRange = 3.0f;   //공격 범위
     public Transform handTransform;  //곰 손 위치
@@ -28,12 +29,25 @@ public class BearAI : MonoBehaviour
     private float idleTimer = 0f;
     private float attackCooldown; //공격 대기 시간 
 
+/*    private void Awake()
+    {
+        if (instance == null)
+        {
+            instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+            instance = this;
+        }
 
+    }*/
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
         animator = GetComponent<Animator>();
-        Player = M_PlayerManager.instance.transform;
+        this.Player = GameObject.Find("Player");
 
         agent.speed = 3.0f;
         attackCooldown = 0.5f;
@@ -45,7 +59,7 @@ public class BearAI : MonoBehaviour
     void Update()
     {
         //플레이어와의 거리 
-        float distanceToPlayer = Vector3.Distance(Player.position, transform.position);
+        float distanceToPlayer = Vector3.Distance(Player.transform.position, transform.position);
 
         //플레이어가 감지 범위 안에 있고 공격 중이 아닐 때 추적 
         if (distanceToPlayer <= detectionRange && !isAttacking)
@@ -82,6 +96,12 @@ public class BearAI : MonoBehaviour
         
     }
 
+
+    private void OnLevelWasLoaded()
+    {
+        Debug.Log("Bear OnLevelWasLoaded");
+        this.Player = GameObject.Find("Player");
+    }
     void Patrol()
     {
         Debug.Log("Bear Patrol");
@@ -145,7 +165,7 @@ public class BearAI : MonoBehaviour
     {
         Debug.Log("Bear Chase");
         agent.isStopped = false;  //isStopped : 에이전트의 이동을 일시적으로 이동 제어 (true경로를 따라가는 걸 멈추고,false 다시 경로 이동)
-        agent.destination = Player.position;  //Destination : 에이전트가 이동할 목표 위치 지정 속성 
+        agent.destination = Player.transform.position;  //Destination : 에이전트가 이동할 목표 위치 지정 속성 
         animator.SetBool("isWalking", true);
         animator.SetBool("isIdle", false);
     }
@@ -165,7 +185,7 @@ public class BearAI : MonoBehaviour
         animator.SetTrigger("Attack");
 
         //플레이어를 바라보고 공격하도록 플레이어 방향으로 회전
-        Vector3 direction = (Player.position - transform.position).normalized;
+        Vector3 direction = (Player.transform.position - transform.position).normalized;
         Quaternion lookRotation = Quaternion.LookRotation(new Vector3(direction.x, 0, direction.z));
         transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * 5f);
         //Slerp : 두 개의 Quaternion을 부드럽게 보간하는 함수 
@@ -185,13 +205,12 @@ public class BearAI : MonoBehaviour
         {
             if (hit.CompareTag("Player"))
             {
-                //M_PlayerManager.instance.StartCoroutine(M_PlayerManager.instance.Shake(M_PlayerManager.instance.shakeDuration, M_PlayerManager.instance.shakeMagnitude));
                 Debug.Log("Player Hit");
                 playerHit = true;
                 M_PlayerManager.instance.FailPanel.SetActive(true);
                 Cursor.lockState = CursorLockMode.None;   //마우스 커서 풀린 상태
                 Time.timeScale = 0;
-                break;
+                SoundManager.instance.StopBGM();
             }
         }
     }
@@ -203,7 +222,7 @@ public class BearAI : MonoBehaviour
         isAttacking = false;  //공격 상태 해제 
         agent.isStopped = false;
 
-        float distanceToPlayer = Vector3.Distance(Player.position, transform.position);
+        float distanceToPlayer = Vector3.Distance(Player.transform.position, transform.position);
 
         if (distanceToPlayer <= attackRange)   //공격 범위 내에 있다면 다시 공격 시작 
         {
